@@ -1,0 +1,38 @@
+const mysql = require('mysql');
+const ClickHouse  = require('@apla/clickhouse');
+// MySQL connection configuration
+const mysqlConfig = {
+    host: 'localhost',
+    user: '',
+    password: '',
+    database: ''
+};
+
+// ClickHouse connection configuration
+const clickhouseConfig = {
+    host: 'localhost',
+    port: 8123,
+    user: '',
+    password: ''
+};
+
+// Create MySQL connection
+const mysqlConnection = mysql.createConnection(mysqlConfig);
+// Create ClickHouse connection
+const clickhouseConnection = new ClickHouse(clickhouseConfig);
+// Function to fetch data from MySQL and insert into ClickHouse using streams
+(function syncData() {
+    mysqlConnection.connect(function(err) {
+        if (err) {
+            console.error('Error connecting to MySQL:', err);
+            return;
+        }
+        console.log('Connected to MySQL.');
+
+        const mysqlQuery = 'SELECT title, userId FROM test_mysql_ch';
+        const mysqlStream = mysqlConnection.query(mysqlQuery).stream();
+
+        const writableClickhouseStream= clickhouseConnection.query('INSERT INTO mysqlToCh', { format: 'JSONEachRow' });
+        mysqlStream.pipe(writableClickhouseStream);
+    });
+})();
